@@ -9,16 +9,28 @@ from module.logger import logger
 from tasks.Component.GeneralBattle.general_battle import GeneralBattle
 from tasks.ExperienceClimb.assets import ExperienceClimbAssets
 from tasks.GameUi.game_ui import GameUi
+from tasks.GameUi.page import page_battle_result, page_reward
 
 
 class ExperienceClimbAct(GameUi, GeneralBattle, ExperienceClimbAssets):
     """在用户手动打开的体验服爬塔页面上点击挑战并执行通用战斗。"""
 
     def _exit_matcher(self):
-        """使用挑战按钮作为战斗结束后的回到活动页判断。"""
+        """返回受战斗阶段保护的挑战按钮结束判断。"""
 
-        # 战斗结算后重新出现挑战按钮，说明上一轮已完整结束；不新增第二张结束截图。
-        return self.I_ACT_FIRE
+        # 挑战按钮可能在点击后的过渡帧短暂残留，交给回调判断可避免首帧误退出。
+        return self._is_battle_finished
+
+    def _is_battle_finished(self):
+        """仅在通用战斗到达结算或奖励页后，判断挑战按钮是否重新出现。"""
+
+        # 没有先识别到战斗页时，挑战按钮的残留不能代表战斗结束，更不能判定失败。
+        context = self._battle_context
+        if context is None or context.last_page not in {page_battle_result, page_reward}:
+            return False
+
+        # 战斗结算后重新出现挑战按钮，说明上一轮已完整结束；继续沿用这一张图片。
+        return self.appear(self.I_ACT_FIRE)
 
     def run(self):
         """循环识别挑战按钮，点击后交给通用战斗逻辑，直到次数或时间达到上限。"""
@@ -40,7 +52,6 @@ class ExperienceClimbAct(GameUi, GeneralBattle, ExperienceClimbAssets):
                 self.run_general_battle(
                     battle_config,
                     battle_key="experience_climb.ap",
-                    exit_matcher=self.I_ACT_FIRE,
                 )
                 continue
 
