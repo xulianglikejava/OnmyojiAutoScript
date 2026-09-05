@@ -15,6 +15,11 @@ from tasks.GameUi.page import page_battle_result, page_reward
 class ExperienceClimbAct(GameUi, GeneralBattle, ExperienceClimbAssets):
     """在用户手动打开的体验服爬塔页面上点击挑战并执行通用战斗。"""
 
+    # 用户要求首次点击失败后重试 3 次，因此一次挑战最多执行 4 次点击尝试。
+    CHALLENGE_CLICK_RETRY_LIMIT = 3
+    # 点击后给游戏页面留出切换时间，再刷新画面确认是否真的离开挑战页。
+    CHALLENGE_CLICK_CONFIRM_DELAY = 0.8
+
     def _exit_matcher(self):
         """返回受战斗阶段保护的挑战按钮结束判断。"""
 
@@ -32,6 +37,29 @@ class ExperienceClimbAct(GameUi, GeneralBattle, ExperienceClimbAssets):
         # 战斗结算后重新出现挑战按钮，说明上一轮已完整结束；继续沿用这一张图片。
         return self.appear(self.I_ACT_FIRE)
 
+    def _click_challenge_with_retry(self):
+        """点击挑战并确认页面切换，首次失败后最多重试三次。"""
+
+        max_attempts = 1 + self.CHALLENGE_CLICK_RETRY_LIMIT
+        for attempt in range(1, max_attempts + 1):
+            # 每次尝试都重新截图，避免沿用上一次匹配到的坐标或旧帧。
+            self.screenshot()
+            if not self.appear_then_click(self.I_ACT_FIRE):
+                return False
+            logger.info(f"Experience climb challenge click attempt {attempt}/{max_attempts}")
+
+            # 按钮仍在画面上不代表点击失败，先等待过渡动画后再确认页面状态。
+            time.sleep(self.CHALLENGE_CLICK_CONFIRM_DELAY)
+            self.screenshot()
+            if self.is_in_battle(False) or not self.appear(self.I_ACT_FIRE):
+                return True
+
+            if attempt < max_attempts:
+                logger.warning("Experience climb challenge click not accepted, retrying")
+
+        logger.warning("Experience climb challenge click failed after 3 retries")
+        return False
+
     def run(self):
         """循环识别挑战按钮，点击后交给通用战斗逻辑，直到次数或时间达到上限。"""
 
@@ -44,10 +72,8 @@ class ExperienceClimbAct(GameUi, GeneralBattle, ExperienceClimbAssets):
 
         logger.hr("Experience climb start", 1)
         while self.current_count < battle_limit and datetime.now() < deadline:
-            self.screenshot()
-
             # 当前页面由用户提前打开；只依赖这一张体验服挑战按钮图，不再识别入口、模式或剩余体力。
-            if self.appear_then_click(self.I_ACT_FIRE, interval=1.5):
+            if self._click_challenge_with_retry():
                 logger.info("Experience climb challenge clicked")
                 self.run_general_battle(
                     battle_config,
@@ -55,7 +81,7 @@ class ExperienceClimbAct(GameUi, GeneralBattle, ExperienceClimbAssets):
                 )
                 continue
 
-            # 挑战按钮尚未出现在当前帧时短暂等待，避免高频截图和重复点击。
+            # 挑战按钮尚未出现或三次重试均未成功时短暂等待，再继续轮询。
             time.sleep(0.5)
 
         if self.current_count >= battle_limit:
