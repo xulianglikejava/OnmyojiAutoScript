@@ -57,20 +57,28 @@ Item {
 
     //创建左边的菜单，最多两级
     //['home', 'xxx':['x1', 'x2']]  是英文的
+    // 体验服爬塔的翻译条目可能尚未写入旧版 qm 文件，中文界面先使用本地兜底文案。
+    function translateMenuName(name){
+        if(name === "ExperienceClimb" && MainEvent.language === "简体中文"){
+            return "体验服爬塔"
+        }
+        return qsTr(name)
+    }
+
     function create(data){
         var datas = []
         for(var items in data){
             if(items.length === 0){
-                datas.push(menu_tree.createItem(items,false))
+                datas.push(menu_tree.createItem(translateMenuName(items),false))
             }else{
                 var da = []
                 for(var item in data[items]){
                     if (typeof data[items][item] !== "string") {
                       continue
                     }
-                    da.push(menu_tree.createItem(data[items][item], false))
+                    da.push(menu_tree.createItem(translateMenuName(data[items][item]), false))
                 }
-                datas.push(menu_tree.createItem(items, true, da))
+                datas.push(menu_tree.createItem(translateMenuName(items), true, da))
             }
         }
         menu_tree.updateData(datas)

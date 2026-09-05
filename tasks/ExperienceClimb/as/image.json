@@ -1,0 +1,11 @@
+[
+  {
+    "itemName": "act_fire",
+    "imageName": "as_act_fire.png",
+    "roiFront": "1132,602,88,54",
+    "roiBack": "1080,530,192,190",
+    "method": "Template matching",
+    "threshold": 0.8,
+    "description": "活动通用挑战图标"
+  }
+]

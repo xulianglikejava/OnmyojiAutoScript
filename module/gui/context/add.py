@@ -100,5 +100,3 @@ if __name__ == "__main__":
     print(a.all_script_files())
     print(a.all_json_file())
     print(a.generate_script_name())
-
-

@@ -12,6 +12,14 @@ Item{
 
     }
 
+    // 旧版 zh_CN.qm 可能没有体验服爬塔条目，中文界面在任务卡片上使用兜底文案。
+    function translateTaskName(name){
+        if(name === "ExperienceClimb" && MainEvent.language === "简体中文"){
+            return "体验服爬塔"
+        }
+        return qsTr(name)
+    }
+
     FluScrollablePage{
         id: contentScrollable
         width: 800
@@ -81,7 +89,7 @@ Item{
                     top: parent.top
                     topMargin: 6
                 }
-                text: qsTr( model.task)
+                text: translateTaskName(model.task)
                 font: FluTextStyle.BodyStrong
             }
             FluText{
